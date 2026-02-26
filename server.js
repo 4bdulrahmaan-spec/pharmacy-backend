@@ -34,6 +34,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 
+import uploadRoutes from './src/routes/uploadRoutes.js';
+
+app.use('/api/upload', uploadRoutes);
+
 import User from './src/models/User.js';
 import Category from './src/models/Category.js';
 import Product from './src/models/Product.js';
