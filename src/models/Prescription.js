@@ -18,7 +18,21 @@ const prescriptionSchema = new mongoose.Schema(
         },
         adminNotes: {
             type: String
-        }
+        },
+        products: [
+            {
+                product: {
+                    type: mongoose.Schema.ObjectId,
+                    ref: 'Product',
+                    required: true
+                },
+                qty: {
+                    type: Number,
+                    required: true,
+                    default: 1
+                }
+            }
+        ]
     },
     {
         timestamps: true

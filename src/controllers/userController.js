@@ -1,5 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import asyncHandler from 'express-async-handler';
+import { OAuth2Client } from 'google-auth-library';
 
 // Generate JWT
 const generateToken = (id) => {
@@ -11,7 +13,7 @@ const generateToken = (id) => {
 // @desc    Register a new user
 // @route   POST /api/users/register
 // @access  Public
-export const registerUser = async (req, res) => {
+export const registerUser = asyncHandler(async (req, res) => {
     const { name, email, password, phone } = req.body;
 
     const userExists = await User.findOne({ email });
@@ -40,12 +42,12 @@ export const registerUser = async (req, res) => {
         res.status(400);
         throw new Error('Invalid user data');
     }
-};
+});
 
 // @desc    Auth user & get token
 // @route   POST /api/users/login
 // @access  Public
-export const authUser = async (req, res) => {
+export const authUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select('+password');
@@ -62,12 +64,69 @@ export const authUser = async (req, res) => {
         res.status(401);
         throw new Error('Invalid email or password');
     }
-};
+});
+
+// @desc    Auth user via Google & get token
+// @route   POST /api/users/google
+// @access  Public
+export const googleLogin = asyncHandler(async (req, res) => {
+    const { tokenId } = req.body;
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: tokenId,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const { email_verified, email, name, picture } = ticket.getPayload();
+
+        if (email_verified) {
+            let user = await User.findOne({ email });
+
+            if (user) {
+                // Return existing user
+                res.json({
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    token: generateToken(user._id),
+                });
+            } else {
+                // Generate a random secure placeholder password since password isn't used
+                const password = email + process.env.JWT_SECRET;
+                // Create user
+                user = await User.create({
+                    name,
+                    email,
+                    password,
+                    phone: '0000000000', // Placeholder since Google doesn't provide it
+                });
+
+                res.status(201).json({
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    token: generateToken(user._id),
+                });
+            }
+        } else {
+            res.status(400);
+            throw new Error('Google Email not verified');
+        }
+    } catch (error) {
+        res.status(401);
+        throw new Error('Google Authentication Failed: ' + error.message);
+    }
+});
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
-export const getUserProfile = async (req, res) => {
+export const getUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (user) {
@@ -82,12 +141,12 @@ export const getUserProfile = async (req, res) => {
         res.status(404);
         throw new Error('User not found');
     }
-};
+});
 
 // @desc    Update user profile
 // @route   PUT /api/users/profile
 // @access  Private
-export const updateUserProfile = async (req, res) => {
+export const updateUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (user) {
@@ -111,12 +170,12 @@ export const updateUserProfile = async (req, res) => {
         res.status(404);
         throw new Error('User not found');
     }
-};
+});
 
 // @desc    Add new address
 // @route   POST /api/users/address
 // @access  Private
-export const addUserAddress = async (req, res) => {
+export const addUserAddress = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (user) {
@@ -136,4 +195,4 @@ export const addUserAddress = async (req, res) => {
         res.status(404);
         throw new Error('User not found');
     }
-};
+});

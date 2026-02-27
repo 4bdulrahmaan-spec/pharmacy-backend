@@ -1,10 +1,11 @@
 import Product from '../models/Product.js';
 import Category from '../models/Category.js';
+import asyncHandler from 'express-async-handler';
 
 // @desc    Fetch all products with filtering, search, and sorting
 // @route   GET /api/products
 // @access  Public
-export const getProducts = async (req, res) => {
+export const getProducts = asyncHandler(async (req, res) => {
     const { keyword, category, type, sort } = req.query;
 
     let query = {};
@@ -32,12 +33,12 @@ export const getProducts = async (req, res) => {
 
     const products = await Product.find(query).populate('category', 'name').sort(sortCriteria);
     res.json(products);
-};
+});
 
 // @desc    Fetch single product
 // @route   GET /api/products/:id
 // @access  Public
-export const getProductById = async (req, res) => {
+export const getProductById = asyncHandler(async (req, res) => {
     const product = await Product.findById(req.params.id).populate('category', 'name');
 
     if (product) {
@@ -46,12 +47,12 @@ export const getProductById = async (req, res) => {
         res.status(404);
         throw new Error('Product not found');
     }
-};
+});
 
 // @desc    Create a product
 // @route   POST /api/products
 // @access  Private/Admin
-export const createProduct = async (req, res) => {
+export const createProduct = asyncHandler(async (req, res) => {
     const product = new Product({
         name: req.body.name,
         price: req.body.price,
@@ -62,17 +63,18 @@ export const createProduct = async (req, res) => {
         stock: req.body.stock,
         type: req.body.type,
         discount: req.body.discount,
-        requiresPrescription: req.body.requiresPrescription || false
+        requiresPrescription: req.body.requiresPrescription || false,
+        barcode: req.body.barcode || undefined
     });
 
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
-};
+});
 
 // @desc    Update a product
 // @route   PUT /api/products/:id
 // @access  Private/Admin
-export const updateProduct = async (req, res) => {
+export const updateProduct = asyncHandler(async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
@@ -88,6 +90,9 @@ export const updateProduct = async (req, res) => {
         if (req.body.requiresPrescription !== undefined) {
             product.requiresPrescription = req.body.requiresPrescription;
         }
+        if (req.body.barcode !== undefined) {
+            product.barcode = req.body.barcode || undefined;
+        }
 
         const updatedProduct = await product.save();
         res.json(updatedProduct);
@@ -95,12 +100,12 @@ export const updateProduct = async (req, res) => {
         res.status(404);
         throw new Error('Product not found');
     }
-};
+});
 
 // @desc    Delete a product
 // @route   DELETE /api/products/:id
 // @access  Private/Admin
-export const deleteProduct = async (req, res) => {
+export const deleteProduct = asyncHandler(async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
@@ -110,20 +115,20 @@ export const deleteProduct = async (req, res) => {
         res.status(404);
         throw new Error('Product not found');
     }
-};
+});
 
 // @desc    Fetch categories
 // @route   GET /api/products/categories
 // @access  Public
-export const getCategories = async (req, res) => {
+export const getCategories = asyncHandler(async (req, res) => {
     const categories = await Category.find({});
     res.json(categories);
-};
+});
 
 // @desc    Create a category
 // @route   POST /api/products/categories
 // @access  Private/Admin
-export const createCategory = async (req, res) => {
+export const createCategory = asyncHandler(async (req, res) => {
     const { name, description, type } = req.body;
     const categoryExists = await Category.findOne({ name });
     if (categoryExists) {
@@ -132,4 +137,4 @@ export const createCategory = async (req, res) => {
     }
     const category = await Category.create({ name, description, type });
     res.status(201).json(category);
-};
+});

@@ -22,7 +22,9 @@ export const uploadPrescription = async (req, res) => {
 // @route   GET /api/prescriptions
 // @access  Private/Admin
 export const getPrescriptions = async (req, res) => {
-    const prescriptions = await Prescription.find({}).populate('user', 'name email');
+    const prescriptions = await Prescription.find({})
+        .populate('user', 'name email')
+        .populate('products.product', 'name price imageUrl brand stock');
     res.json(prescriptions);
 };
 
@@ -30,7 +32,8 @@ export const getPrescriptions = async (req, res) => {
 // @route   GET /api/prescriptions/my
 // @access  Private
 export const getMyPrescriptions = async (req, res) => {
-    const prescriptions = await Prescription.find({ user: req.user._id });
+    const prescriptions = await Prescription.find({ user: req.user._id })
+        .populate('products.product', 'name price imageUrl brand stock');
     res.json(prescriptions);
 };
 
@@ -43,6 +46,10 @@ export const updatePrescriptionStatus = async (req, res) => {
     if (prescription) {
         prescription.status = req.body.status || prescription.status;
         prescription.adminNotes = req.body.adminNotes || prescription.adminNotes;
+
+        if (req.body.products) {
+            prescription.products = req.body.products;
+        }
 
         const updatedPrescription = await prescription.save();
         res.json(updatedPrescription);

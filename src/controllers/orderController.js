@@ -1,9 +1,10 @@
 import Order from '../models/Order.js';
+import asyncHandler from 'express-async-handler';
 
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
-export const addOrderItems = async (req, res) => {
+export const addOrderItems = asyncHandler(async (req, res) => {
     const {
         orderItems,
         shippingAddress,
@@ -18,28 +19,28 @@ export const addOrderItems = async (req, res) => {
     if (orderItems && orderItems.length === 0) {
         res.status(400);
         throw new Error('No order items');
-    } else {
-        const order = new Order({
-            orderItems,
-            user: req.user._id,
-            shippingAddress,
-            paymentMethod,
-            itemsPrice,
-            taxPrice,
-            shippingPrice,
-            totalPrice,
-            prescription
-        });
-
-        const createdOrder = await order.save();
-        res.status(201).json(createdOrder);
     }
-};
+
+    const order = new Order({
+        orderItems,
+        user: req.user._id,
+        shippingAddress,
+        paymentMethod,
+        itemsPrice,
+        taxPrice,
+        shippingPrice,
+        totalPrice,
+        prescription
+    });
+
+    const createdOrder = await order.save();
+    res.status(201).json(createdOrder);
+});
 
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
 // @access  Private
-export const getOrderById = async (req, res) => {
+export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
         .populate('user', 'name email')
         .populate('prescription');
@@ -50,12 +51,12 @@ export const getOrderById = async (req, res) => {
         res.status(404);
         throw new Error('Order not found');
     }
-};
+});
 
 // @desc    Update order to paid
 // @route   PUT /api/orders/:id/pay
 // @access  Private
-export const updateOrderToPaid = async (req, res) => {
+export const updateOrderToPaid = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id);
 
     if (order) {
@@ -74,36 +75,43 @@ export const updateOrderToPaid = async (req, res) => {
         res.status(404);
         throw new Error('Order not found');
     }
-};
+});
 
 // @desc    Update order status
 // @route   PUT /api/orders/:id/status
 // @access  Private/Admin
-export const updateOrderStatus = async (req, res) => {
+export const updateOrderStatus = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id);
 
     if (order) {
         order.status = req.body.status || order.status;
         const updatedOrder = await order.save();
+
+        // Emit web socket event to the specific order room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(req.params.id).emit('status_updated', updatedOrder.status);
+        }
+
         res.json(updatedOrder);
     } else {
         res.status(404);
         throw new Error('Order not found');
     }
-};
+});
 
 // @desc    Get logged in user orders
 // @route   GET /api/orders/myorders
 // @access  Private
-export const getMyOrders = async (req, res) => {
+export const getMyOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({ user: req.user._id });
     res.json(orders);
-};
+});
 
 // @desc    Get all orders
 // @route   GET /api/orders
 // @access  Private/Admin
-export const getOrders = async (req, res) => {
+export const getOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find({}).populate('user', 'id name');
     res.json(orders);
-};
+});

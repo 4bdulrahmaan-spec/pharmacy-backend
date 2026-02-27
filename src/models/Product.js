@@ -45,6 +45,12 @@ const productSchema = new mongoose.Schema(
             type: String,
             enum: ['medicine', 'pet'],
             required: true
+        },
+        barcode: {
+            type: String,
+            trim: true,
+            sparse: true,
+            unique: true
         }
     },
     {
